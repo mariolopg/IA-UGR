@@ -1,0 +1,12 @@
+una:13
+dos:14
+tres:15
+cuatro:16
+cinco:17
+seis:18
+siete:19
+ocho:20
+nueve:21
+diez:22
+once:23
+doce:00

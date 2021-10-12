@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<aiml version="2.0">
+
+    <!-- Regla 1 (estaciones) -->
+    <category>
+        <pattern>En que estacion estamos</pattern>
+        <template>
+            Estamos en <srai>SEASON</srai>
+        </template>
+    </category>
+
+    <!-- Regla 2 (fase del dia) -->
+    <category>
+        <pattern>En que fase del dia estamos</pattern>
+        <template>
+            <think><set var="fase_dia"><srai>DAY PHASE</srai></set></think>
+            <condition var="fase_dia"> 
+                <li value="manyana">Es por la <get var="fase_dia"/></li>
+                <li value="tarde">Es por la <get var="fase_dia"/></li>
+                <li value="noche">Es de <get var="fase_dia"/></li>
+            </condition>
+        </template>
+    </category>
+
+     <!-- Regla 3 (dia de la semana) -->
+    <category>
+        <pattern>Que dia de la semana es <set>tiempos</set></pattern>
+        <template>
+            <think><set var="dia"><star/></set></think>
+            <condition var="dia">
+                <li value="hoy">Hoy es <srai>DAY</srai></li>
+                <li value="manyana">Manyana es <srai>TOMORROW</srai></li>
+                <li value="pasado manyana">Pasado manyana es <srai>DAY AFTER TOMORROW</srai></li>
+            </condition>
+        </template>
+    </category>
+
+    <!-- Regla 4 (fecha dentro de una semana) -->
+    <category>
+        <pattern>Que fecha sera dentro de una semana</pattern>
+        <template>
+                Dentro de una semana sera <srai>DATE IN 7 DAYS</srai>
+        </template>
+    </category>
+
+    <!-- Regla 5 Que fecha será el proximo [Lunes...Domingo] -->
+    <category>
+        <pattern>Que fecha sera el proximo <set>weekday_es</set></pattern>
+        <template>
+            El proximo <star/> sera <srai>DATE ON NEXT <star/></srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>Que fecha sera el proximo *</pattern>
+        <template><star/> no es un dia de la semana</template>
+    </category>
+
+    <!-- Regla auxiliar para arreglar date on -->
+    <!-- Supongamos date on lunes ==> si estamos es lunes te devuelve la fecha de hoy -->
+    <!-- Supongamos date on next lunes ==> si estamos es lunes te devuelve la fecha de dentro de una semana -->
+    <category>
+        <pattern>DATE ON NEXT <set>weekday_es</set></pattern>
+        <template>
+            <think>
+                <set var="hoy"><srai>DATE</srai></set>
+                <set var="siguiente"><srai>DATE ON <star/></srai></set>
+
+                <condition var="siguiente">
+                    <li><value><get var="hoy"/></value>
+                        <set var="salida"><srai>DATE IN 7 DAYS</srai></set>
+                    </li>
+                    <li>
+                        <set var="salida"><srai>DATE ON <star/></srai></set>
+                    </li>
+                </condition>
+            </think>
+            <get var="salida"/>
+        </template>
+    </category>
+
+</aiml>

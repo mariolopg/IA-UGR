@@ -1,0 +1,561 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<aiml version="2.0">
+
+    <!-- Regla para realizar intervalos con una lista de horas -->
+	<category>
+		<pattern>RESUMIRHORAS *</pattern>
+		<template>
+			<think>
+				<!-- Declaración de variables -->
+				<set var="contador">1</set>
+				<set var="contador_max"><srai>COUNT <star/></srai></set>
+				<set var="salida"> </set>
+
+				<set var="hora"> </set>
+				<set var="hora_ordinal"> </set>
+
+				<set var="lista_horas"><star/></set>
+
+				<condition var="contador">
+					<li><value><map name="successor"><get var="contador_max"/></map></value></li>
+					<li>
+
+						<set var="hora"><srai>SELECTITEM <get var="contador"/> IN <get var="lista_horas"/></srai></set>
+						<set var="hora_ordinal"><srai>ORDINAL <get var="hora"/></srai></set>
+
+						<!-- Busco predecesor y sucesor de la hora actual -->
+						<set var="predecesor"><srai>FINDITEM <srai><map name="predecessor"><get var="hora_ordinal"/></map> A HORA</srai> IN <get var="lista_horas"/></srai></set>
+						<set var="sucesor"><srai>FINDITEM <srai><map name="successor"><get var="hora_ordinal"/></map> A HORA</srai> IN <get var="lista_horas"/></srai></set>
+
+						<!-- Compruebo si var="hora" tiene predecesor -->
+						<condition var="predecesor">
+							<!-- Si no tiene predecesor ==> comienzo de un intervalo: salida += [ hora -->
+							<li value="0">
+								<set var="salida"><get var="salida"/> [ <get var="hora"/></set>
+								<!-- 2 posibilidades -->
+									<!-- P1: Tiene sucesor ==> no se hace nada -->
+									<!-- P2: No tiene sucesor ==> intervalo único: salida += ] -->
+								<condition var="sucesor">
+									<li value="0"> <!-- P2 -->
+										<set var="salida"><get var="salida"/> ]</set>
+									</li>
+								</condition>
+							</li>
+							<!-- Si tiene predecesor ==> puede ser parte intervalo o final: salida -->
+							<li>
+								<!-- 2 posibilidades -->
+									<!-- P1: Tiene sucesor ==> no se hace nada -->
+									<!-- P2: No tiene sucesor ==> final del intervalo: salida += a hora ] -->
+								<condition var="sucesor">
+									<li value="0">
+										<set var="salida"><get var="salida"/> a <get var="hora"/> ]</set>
+									</li>
+								</condition>
+							</li>
+						</condition>
+						<set var="contador"><map name="successor"><get var="contador"/></map></set>
+						<loop/>
+					</li>
+				</condition>
+			</think>
+			<get var="salida"/>
+		</template>
+	</category>
+
+    <!-- Regla para transoformar una hora a letra -->
+	<category>
+		<pattern>HORA A LETRA *</pattern>
+		<template>
+			<think>
+				<set var="ordinal"><map name="predecessor"><srai>ORDINAL <star/></srai></map></set>
+				<set var="salida"><map name="hora_a_letra"><get var="ordinal"/></map></set>
+			</think>
+			<get var="salida"/>
+		</template>
+	</category>
+
+	<category>
+		<pattern>LETRA A HORA * DE LA <set>manyana_tarde</set></pattern>
+		<template>
+			<think>
+				<set var="franja"><star index="2"/></set>
+				<set var="hora"><star index="1"/></set>
+				<set var="salida"></set>
+
+				<condition var="franja">
+					<li value="MANYANA">
+						<set var="salida"><map name="letra_hora_manyana"><get var="hora"/></map>:00</set>
+					</li>
+					<li value="TARDE">
+						<set var="salida"><map name="letra_hora_tarde"><get var="hora"/></map>:00</set>
+					</li>
+				</condition>
+			</think>
+			<get var="salida"/>
+		</template>
+	</category>
+
+	<category>
+		<pattern>TRADUCIR INTERVALO *</pattern>
+		<template>
+			<think>
+				<set var="contador">2</set>
+				<set var="contador_max"><srai>COUNT <star/></srai></set>
+
+				<set var="salida"> </set>
+
+				<condition var="contador">
+					<li><value><map name="successor"><get var="contador_max"/></map></value></li>
+					<li>
+
+						<set var="elemento"><srai>SELECTITEM <get var="contador"/> IN <star/></srai></set>
+
+						<!-- Almaceno los elementos anterior y posterior -->
+						<set var="predecesor"><srai>SELECTITEM <map name="predecessor"><get var="contador"/></map> IN <star/></srai></set>
+						<set var="sucesor"><srai>SELECTITEM <map name="successor"><get var="contador"/></map> IN <star/></srai></set>
+
+						<condition var="elemento">
+							<li value="["></li>
+							<li value="a"></li>
+							<li value="]"></li>
+							<li>
+
+							<!-- Compruebo si el elemento anterior es [, a, ] ó una hora -->
+							<condition var="predecesor">
+								<!-- Si el elemento anterior es [ ==> Dos posibilidades--> 
+								<li value="[">
+									<!-- 2 posibilidades -->
+										<!-- P1: Sucesor = a ==> no se hace nada -->
+										<!-- P2: Sucesor = ] ==> intervalo único -->
+									<condition var="sucesor">
+										<li value="a">
+											<set var="salida"><get var="salida"/> desde las <srai>HORA A LETRA <get var="elemento"/></srai></set>
+										</li>
+										<li value="]"> <!-- P2 -->
+											<set var="salida"><get var="salida"/> a las <srai>HORA A LETRA <get var="elemento"/></srai>, </set>
+										</li>
+									</condition>
+								</li>
+								<!-- Si tiene predecesor ==> puede ser parte intervalo o final: salida -->
+								<li value="a">
+									<set var="salida"><get var="salida"/> hasta las <srai>HORA A LETRA <get var="elemento"/></srai>, </set>
+								</li>
+								<li value="]"></li>
+								<li></li>
+							</condition>
+						</li>
+						</condition>
+						<set var="contador"><map name="successor"><get var="contador"/></map></set>
+						<loop/>
+					</li>
+				</condition>
+			</think>
+			<get var="salida"/>
+		</template>
+	</category>
+
+    <!-- Regla para transformar un dia en un formato mas legible -->
+    <category>
+        <pattern>DIA LEGIBLE <set>number</set> (DE) <set>month_es</set> (DEL) <set>number</set></pattern>
+        <template>
+            <think>
+                <set var="fecha"><star index="1"/> <star index="2"/> <star index="3"/></set>
+                <set var="fecha_formateada"><srai>FORMATEAR FECHA <get var="fecha"/></srai></set>
+                <condition var="fecha_formateada">
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE</srai></srai></value>
+                        <set var="salida">hoy</set>
+                    </li>
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE ON <srai>TOMORROW</srai></srai></srai></value>
+                        <set var="salida">manyana</set>
+                    </li>
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE ON <srai>DAY AFTER TOMORROW</srai></srai></srai></value>
+                        <set var="salida">pasado manyana</set>
+                    </li>
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE ON NEXT LUNES</srai></srai></value>
+                        <set var="salida">el lunes</set>
+                    </li>
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE ON NEXT MARTES</srai></srai></value>
+                        <set var="salida">el martes</set>
+                    </li>
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE ON NEXT MIERCOLES</srai></srai></value>
+                        <set var="salida">el miercoles</set>
+                    </li>
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE ON NEXT JUEVES</srai></srai></value>
+                        <set var="salida">el jueves</set>
+                    </li>
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE ON NEXT VIERNES</srai></srai></value>
+                        <set var="salida">el viernes</set>
+                    </li>
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE ON NEXT SABADO</srai></srai></value>
+                        <set var="salida">el sabado</set>
+                    </li>
+                    <li><value><srai>FORMATEAR FECHA <srai>DATE ON NEXT DOMINGO</srai></srai></value>
+                        <set var="salida">el domingo</set>
+                    </li>
+                    <li>
+                        <set var="salida"><get var="fecha"/></set>
+                    </li>
+                </condition>
+            </think>
+            <get var="salida"/>
+        </template>
+    </category>
+
+    <topic name="cita">
+        <category>
+            <pattern>($me viene bien) ($puedo) ($hay hueco) ($puede ser) ($el) ($dia) <set>number</set> (DE) <set>month_es</set> (DEL) <set>number</set></pattern>
+            <template>
+                <srai>n3 cita <star index="1"/> <star index="2"/> <star index="3"/></srai>
+            </template>
+        </category>
+
+        <category>
+            <pattern>($me viene bien) ($puedo) ($hay hueco) ($puede ser) ($el) ($dia) <set>number</set> (DE) <set>month_es</set> (DEL) <set>number</set> A PARTIR DE LAS <set>horas</set></pattern>
+            <template>
+                <srai>n3 cita <star index="1"/> <star index="2"/> <star index="3"/> A PARTIR DE LAS <star index="4"/></srai>
+            </template>
+        </category>
+
+        <category>
+            <pattern>($me viene bien) ($puedo) ($hay hueco) ($puede ser) ($el) ($dia) <set>number</set> (DE) <set>month_es</set> (DEL) <set>number</set> POR LA <set>manyana_tarde</set></pattern>
+            <template>
+                <srai>n3 cita <star index="1"/> <star index="2"/> <star index="3"/> POR LA <star index="4"/></srai>
+            </template>
+        </category>
+
+        <category>
+            <pattern>($me viene bien) ($puedo) ($hay hueco) ($puede ser) ($el) ($dia) <set>number</set> (DE) <set>month_es</set> (DEL) <set>number</set> A PARTIR DE LAS <set>horas_en_letra</set></pattern>
+            <template>
+                <srai>n3 cita <star index="1"/> <star index="2"/> <star index="3"/> A PARTIR DE LAS <star index="4"/></srai>
+            </template>
+        </category>
+
+        <category>
+            <pattern>($me viene bien) ($puedo) ($hay hueco) ($puede ser) ($el) ($dia) ($proximo) ($siguiente) <set>complemento</set></pattern>
+            <template>
+                <srai>n3 cita <star index="1"/></srai>
+            </template>
+        </category>
+
+        <category>
+            <pattern>($me viene bien) ($puedo) ($hay hueco) ($puede ser) ($el) ($dia) ($proximo) ($siguiente) <set>complemento</set> POR LA <set>manyana_tarde</set></pattern>
+            <template>
+                <srai>n3 cita <star index="1"/> POR LA <star index="2"/></srai>
+            </template>
+        </category>
+
+         <category>
+            <pattern>($me viene bien) ($puedo) ($hay hueco) ($puede ser) ($el) ($dia) ($proximo) ($siguiente) <set>complemento</set> A PARTIR DE LAS <set>horas</set></pattern>
+            <template>
+                <srai>n3 cita <star index="1"/> A PARTIR DE LAS <star index="2"/></srai>
+            </template>
+        </category>
+
+        <category>
+            <pattern>($el) ($dia) <set>complemento</set> A PARTIR DE LAS <set>horas_en_letra</set></pattern>
+            <template>
+                <srai>n3 cita <star index="1"/> A PARTIR DE LAS <star index="2"/></srai>
+            </template>
+        </category>
+    </topic>
+
+    <!-- Regla para pedir cita cualquier dia con fecha exacta -->
+	<category>
+        <pattern>(n3) ^ $cita ($para) ($el) ($dia) <set>number</set> (DE) <set>month_es</set> (DEL) <set>number</set></pattern>
+        <template>
+            <think>
+                <set name="fecha"><star index="2"/> <star index="3"/> <star index="4"/></set>
+                <set var="condicion"><srai>LIBRE <get name="fecha"/></srai></set>
+                <set name="horas_libres"> </set>
+            
+                <!-- Compruebo si hay huecos libres en proporcionado -->
+                <condition var="condicion">
+                    <!-- Si hay horas libres se calculan las horas de por la mañana, si las hay, y las de la tarde, si las hay. -->
+                    <li value="SI">
+                        <!-- Almaceno las horas libres  fecha en la variable global horas_libres -->
+                        <set name="horas_libres"><srai>HORASLIBRES <get name="fecha"/></srai></set>
+                        <!-- Se calculan las horas de por la mañana y se almacenan en horas_libres -->
+                        <set var="horas_manyana"><srai>HLMANYANA <get name="fecha"/></srai></set>
+                        <condition var="horas_manyana">
+                            <li value="EMPTYLIST"><set var="horas_manyana">por la manyana esta todo ocupado</set></li>
+                            <li>
+                                <set var="numero_horas"><srai>COUNT <get var="horas_manyana"/></srai></set>
+                                <condition var="numero_horas">
+                                    <li value="5">
+                                         <set var="horas_manyana">tengo toda la manyana libre</set>
+                                    </li>
+                                    <li>
+                                        <set var="horas_manyana">por la manyana tengo hueco <srai>TRADUCIR INTERVALO <srai>RESUMIRHORAS <get var="horas_manyana"/></srai></srai></set>
+                                    </li>
+                                </condition> 
+                            </li>
+                        </condition>
+
+                        <!-- Se calculan las horas de por la tarde y se almacenan en horas_libres -->
+                        <set var="horas_tarde"><srai>HLTARDE <get name="fecha"/></srai></set>
+                        <condition var="horas_tarde">
+                            <li value="EMPTYLIST"><set var="horas_tarde">por la tarde esta todo ocupado</set></li>
+                            <li>
+                                <set var="numero_horas"><srai>COUNT <get var="horas_tarde"/></srai></set>
+                                <condition var="numero_horas">
+                                    <li value="8">
+                                         <set var="horas_tarde">tengo toda la tarde libre</set>
+                                    </li>
+                                    <li>
+                                        <set var="horas_tarde">por la tarde tengo hueco <srai>TRADUCIR INTERVALO <srai>RESUMIRHORAS <get var="horas_tarde"/></srai></srai></set>
+                                    </li>
+                                </condition> 
+                            </li>
+                        </condition>
+                        <set name="topic">hay hueco n3</set>
+                        <set var="salida">Perfecto, hay hueco, <get var="horas_manyana"/> y <get var="horas_tarde"/> ¿A que hora le viene bien?</set>
+                    </li>
+                    <li value="NO">
+                        <set var="salida">Lo siento, ese dia no hay hueco. ¿Desea otro dia?</set>
+                        <set name="topic">otro dia</set>
+                    </li> 
+                </condition>
+            </think>
+            <get var="salida"/>
+        </template>
+    </category>
+
+    <category>
+        <pattern>(n3) ^ cita (el) (dia) <set>number</set> (DE) <set>month_es</set> (DEL) <set>number</set> A PARTIR DE LAS <set>horas</set></pattern>
+        <template>
+            <think>
+                <set var="fecha"><star index="2"/> <star index="3"/> <star index="4"/></set>
+                <set var="condicion"><srai>LIBRE <get var="fecha"/> A PARTIR DE LAS <star index="5"/></srai></set>
+                <set name="horas_libres"> </set>
+            
+                <!-- Compruebo si hay huecos libres en proporcionado -->
+                <condition var="condicion">
+                    <!-- Si hay horas libres se calculan las horas de por la mañana, si las hay, y las de la tarde, si las hay. -->
+                    <li value="SI">
+                        <!-- Almaceno las horas libres  fecha en la variable global horas_libres -->
+                        <set name="horas_libres"><srai>HORASLIBRES <get var="fecha"/> A PARTIR DE LAS <star index="5"/></srai></set>
+                        <set name="topic">hay hueco n3</set>
+                        <li><set var="salida"><srai>DIA LEGIBLE <get var="fecha"/></srai> a partir de las <srai>HORA A LETRA <star index="5"/></srai> tengo los siguientes huecos <srai>TRADUCIR INTERVALO <srai>RESUMIRHORAS <get name="horas_libres"/></srai></srai>. ¿A que hora le viene bien?</set></li>
+                    </li>
+                    <li value="NO">
+                        <set name="topic">otro dia</set>
+                        <set var="salida">Lo siento, <srai>DIA LEGIBLE <get var="fecha"/></srai> no hay hueco. ¿Desea otro dia?</set>   
+                    </li> 
+                </condition>
+            </think>
+            <get var="salida"/>
+        </template>
+    </category>
+
+    <category>
+        <pattern>(n3) ^ cita (el) (dia) <set>number</set> (DE) <set>month_es</set> (DEL) <set>number</set> A PARTIR DE LAS <set>horas_en_letra</set></pattern>
+        <template>
+            <srai>n3 cita <star index="2"/> <star index="3"/> <star index="4"/> A PARTIR DE LAS <srai>LETRA A HORA <star index="5"/></srai></srai>
+        </template>
+    </category>
+
+    <category>
+        <pattern>(n3) ^ $cita ($para) ($el) ($dia) <set>number</set> (DE) <set>month_es</set> (DEL) <set>number</set> POR LA <set>manyana_tarde</set></pattern>
+        <template>
+                <think>
+                <set var="fecha"><star index="2"/> <star index="3"/> <star index="4"/></set>
+                <set var="condicion"><srai>LIBRE <get var="fecha"/> POR LA <star index="5"/></srai></set>
+                <set name="horas_libres"> </set>
+            
+                <!-- Compruebo si hay huecos libres en proporcionado -->
+                <condition var="condicion">
+                    <!-- Si hay horas libres se calculan las horas de por la mañana, si las hay, y las de la tarde, si las hay. -->
+                    <li value="SI">
+                        <!-- Almaceno las horas libres  fecha en la variable global horas_libres -->
+                        <set name="horas_libres"><srai>HORASLIBRES <get var="fecha"/> POR LA <star index="5"/></srai></set>
+                        <set name="topic">hay hueco n3</set>
+                        <set var="franja"><star index="5"/></set>
+                        <set var="numero_horas"><srai>COUNT <get name="horas_libres"/></srai></set>
+
+                        <condition var="franja">
+                            <li value="manyana">    
+                                <condition var="numero_horas">
+                                    <li value="5">
+                                         <set var="salida"><srai>DIA LEGIBLE <get var="fecha"/></srai> tengo toda la manyana libre. ¿A que hora le viene bien?</set>
+                                    </li>
+                                    <li>
+                                        <set var="salida"><srai>DIA LEGIBLE <get var="fecha"/></srai> por la <star index="5"/> tengo hueco <srai>TRADUCIR INTERVALO <srai>RESUMIRHORAS <get name="horas_libres"/></srai></srai>. ¿A que hora le viene bien?</set>
+                                    </li>
+                                </condition>
+                            </li>
+                            <li value="tarde">
+                                <condition var="numero_horas">
+                                    <li value="8">
+                                         <set var="salida"><srai>DIA LEGIBLE <get var="fecha"/></srai> tengo toda la tarde libre. ¿A que hora le viene bien?</set>
+                                    </li>
+                                    <li>
+                                        <set var="salida"><srai>DIA LEGIBLE <get var="fecha"/></srai> por la <star index="5"/> tengo hueco <srai>TRADUCIR INTERVALO <srai>RESUMIRHORAS <get name="horas_libres"/></srai></srai>. ¿A que hora le viene bien?</set>
+                                    </li>
+                                </condition>
+                            </li>
+                        </condition>
+                    </li>
+                    <li value="NO">
+                        <set name="topic">otro dia</set>
+                        <set var="salida">Lo siento, <star index="2"/> no hay hueco. ¿Desea otro dia?</set>   
+                    </li> 
+                </condition>
+            </think>
+            <get var="salida"/>
+        </template>
+    </category>
+
+    <!-- Regla para pedir cita hoy manyana o pasado manyana-->
+	<category>
+        <pattern>(n3) ^ $cita ($para) <set>tiempos</set></pattern>
+        <template>
+            <think>
+                <set var="tiempo"><star index="2"/></set>
+                <condition var="tiempo">
+                    <li value="hoy"><set var="fecha"><srai>DATE</srai></set></li>
+                    <li value="manyana"><set var="fecha"><srai>DATE ON <srai>TOMORROW</srai></srai></set></li>
+                    <li value="pasado manyana"><set var="fecha"><srai>DATE ON <srai>DAY AFTER TOMORROW</srai></srai></set></li>
+                </condition>
+            </think>
+            <srai>N3 CITA EL DIA <get var="fecha"/></srai>
+        </template>
+    </category>
+
+    <!-- Regla para pedir cita lunes martes miercoles jueves viernes sabado o domingo-->
+    <category>
+        <pattern>(n3) ^ $cita ($el) ($proximo) ($siguiente) <set>weekday_es</set></pattern>
+        <template>
+            <srai>N3 CITA EL DIA <srai>DATE ON NEXT <star index="2"/></srai></srai>
+        </template>
+    </category>
+
+    <!-- Regla para pedir cita cualquier dia a partir de una hora -->
+    <category>
+        <pattern>(n3) ^ $cita ($para) ($el) ($dia) <set>complemento</set> a partir de las <set>horas</set></pattern>
+        <template>
+            <think>
+                <set var="condicion"><srai>LIBRE <star index="2"/> A PARTIR DE LAS <star index="3"/></srai></set>
+                <set name="horas_libres"> </set>
+            
+                <!-- Compruebo si hay huecos libres en proporcionado -->
+                <condition var="condicion">
+                    <!-- Si hay horas libres se calculan las horas de por la mañana, si las hay, y las de la tarde, si las hay. -->
+                    <li value="SI">
+                        <!-- Almaceno las horas libres  fecha en la variable global horas_libres -->
+                        <set name="horas_libres"><srai>HORASLIBRES <star index="2"/> A PARTIR DE LAS <star index="3"/></srai></set>
+                        <set name="topic">hay hueco n3</set>
+                        <li><set var="salida"><star index="2"/> a partir de las <srai>HORA A LETRA <star index="3"/></srai> tengo hueco <srai>TRADUCIR INTERVALO <srai>RESUMIRHORAS <get name="horas_libres"/></srai></srai>. ¿A que hora le viene bien?</set></li>
+                    </li>
+                    <li value="NO">
+                        <set name="topic">otro dia</set>
+                        <set var="salida">Lo siento, <star index="2"/> no hay hueco. ¿Desea otro dia?</set>   
+                    </li> 
+                </condition>
+            </think>
+            <get var="salida"/>
+        </template>
+    </category>
+
+    <!-- Regla para pedir cita cualquier dia a partir de una hora proporcionada con letra -->
+	<category>
+        <pattern>(n3) ^ $cita ($para) ($el) ($dia) <set>complemento</set> a partir de las <set>horas_en_letra</set></pattern>
+        <template>
+			<srai>N3 CITA EL DIA <star index="2"/> A PARTIR DE LAS <srai>LETRA A HORA <star index="3"/></srai></srai>
+		</template>
+	</category>
+
+    <!-- Regla para pedir cita cualquier dia por la manyana o por la tarde -->
+    <category>
+        <pattern>(n3) ^ $cita ($para) ($el) ($dia) <set>complemento</set> por la <set>manyana_tarde</set></pattern>
+        <template>
+            <think>
+                <set var="condicion"><srai>LIBRE <star index="2"/> POR LA <star index="3"/></srai></set>
+                <set name="horas_libres"> </set>
+            
+                <!-- Compruebo si hay huecos libres en proporcionado -->
+                <condition var="condicion">
+                    <!-- Si hay horas libres se calculan las horas de por la mañana, si las hay, y las de la tarde, si las hay. -->
+                    <li value="SI">
+                        <!-- Almaceno las horas libres  fecha en la variable global horas_libres -->
+                        <set name="horas_libres"><srai>HORASLIBRES <star index="2"/> POR LA <star index="3"/></srai></set>
+                        <set name="topic">hay hueco n3</set>
+                        <set var="franja"><star index="3"/></set>
+                        <set var="numero_horas"><srai>COUNT <get name="horas_libres"/></srai></set>
+
+                        <condition var="franja">
+                            <li value="manyana">    
+                                <condition var="numero_horas">
+                                    <li value="5">
+                                         <set var="salida">Tengo toda la manyana libre. ¿A que hora le viene bien?</set>
+                                    </li>
+                                    <li>
+                                        <set var="salida"><star index="2"/> por la <star index="3"/> tengo hueco <srai>TRADUCIR INTERVALO <srai>RESUMIRHORAS <get name="horas_libres"/></srai></srai>. ¿A que hora le viene bien?</set>
+                                    </li>
+                                </condition>
+                            </li>
+                            <li value="tarde">
+                                <condition var="numero_horas">
+                                    <li value="8">
+                                         <set var="salida">Tengo toda la tarde libre. ¿A que hora le viene bien?</set>
+                                    </li>
+                                    <li>
+                                        <set var="salida"><star index="2"/> por la <star index="3"/> tengo hueco <srai>TRADUCIR INTERVALO <srai>RESUMIRHORAS <get name="horas_libres"/></srai></srai>. ¿A que hora le viene bien?</set>
+                                    </li>
+                                </condition>
+                            </li>
+                        </condition>
+                    </li>
+                    <li value="NO">
+                        <set name="topic">otro dia</set>
+                        <set var="salida">Lo siento, <star index="2"/> no hay hueco. ¿Desea otro dia?</set>   
+                    </li> 
+                </condition>
+            </think>
+            <get var="salida"/>
+        </template>
+    </category>
+
+    <!-- En caso de que haya hueco el dia solicitado -->
+    <topic name="hay hueco n3">
+        <category>
+            <pattern>(n3) (A) (las) <set>horas</set></pattern>
+            <template>
+                <think>
+                    <set name="hora_elegida"><srai>FINDITEM <star index="1"/> IN <get name="horas_libres"/></srai></set>
+                    <set var="salida"></set>
+
+                    <condition name="hora_elegida">
+                        <li value="0"><set var="salida">La hora es incorrecta, recuerda que las horas son <get name="horas_libres"/></set></li>
+                        <li>
+                            <srai>MARK NOLIBRE AT <star/> ON <srai>FORMATEAR FECHA <get name="fecha"/></srai></srai>
+                            <set var="salida">Estupendo, queda apuntado <srai>DIA LEGIBLE <get name="fecha"/></srai> a las <srai>HORA A LETRA <star/></srai></set>
+                        </li>
+                    </condition>
+                </think>
+                <get var="salida"/>
+            </template>
+        </category>
+
+		<category>
+            <pattern>^ (a) (las) <set>horas_en_letra</set></pattern>
+            <template>
+                <think>
+                    <set name="hora_en_letra"><star index="2"/></set>
+                </think>
+				<srai>N3 A las <srai>LETRA A HORA <star index="2"/></srai></srai>
+			</template>
+        </category>
+
+        <category>
+            <pattern>Me da igual</pattern>
+            <template>
+                <think>
+                    <set var="hora"><srai>SELECTITEM 1 IN <get name="horas_libres"/></srai></set>
+                </think>
+                <srai>N3 A LAS <get var="hora"/></srai>
+            </template>
+        </category>
+        
+    </topic>
+
+</aiml>
